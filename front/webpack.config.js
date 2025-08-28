@@ -25,20 +25,20 @@ const assets = [
   }
 ]
 
-const polyfills = [
-  {
-    from: resolve(`${webcomponentsjs}/webcomponents-*.js`),
-    to: join(OUTPUT_PATH, 'vendor')
-  },
-  {
-    from: resolve(`${webcomponentsjs}/bundles/*.js`),
-    to: join(OUTPUT_PATH, 'vendor', 'bundles')
-  },
-  {
-    from: resolve(`${webcomponentsjs}/custom-elements-es5-adapter.js`),
-    to: join(OUTPUT_PATH, 'vendor')
-  }
-]
+const polyfills = [ 
+  { 
+    from: `${webcomponentsjs}/webcomponents-*.js`, 
+    to: join(OUTPUT_PATH, 'vendor') 
+  }, 
+  { 
+    from: `${webcomponentsjs}/bundles/*.js`, 
+    to: join(OUTPUT_PATH, 'vendor', 'bundles') 
+  }, 
+  { 
+    from: `${webcomponentsjs}/custom-elements-es5-adapter.js`, 
+    to: join(OUTPUT_PATH, 'vendor') 
+  } 
+] 
 
 const commonConfig = merge([
   {

@@ -8,45 +8,40 @@ import io
 
 
 def folder_to_keys(folder, enable_text=True, enable_image=True, enable_metadata=False):
-    """returns a list of keys from a folder of images and text"""
     path = Path(folder)
-    text_files = None
-    metadata_files = None
-    image_files = None
+
+    text_files = {}
+    image_files = {}
+    metadata_files = {}
+
     if enable_text:
-        text_files = [*path.glob("**/*.txt")]
-        text_files = {text_file.relative_to(path).as_posix(): text_file for text_file in text_files}
+        for f in path.glob("**/*.txt"):
+            key = f.stem
+            text_files[key] = f
+
     if enable_image:
-        image_files = [
-            *path.glob("**/*.png"),
-            *path.glob("**/*.jpg"),
-            *path.glob("**/*.jpeg"),
-            *path.glob("**/*.bmp"),
-            *path.glob("**/*.webp"),
-            *path.glob("**/*.PNG"),
-            *path.glob("**/*.JPG"),
-            *path.glob("**/*.JPEG"),
-            *path.glob("**/*.BMP"),
-            *path.glob("**/*.WEBP"),
-        ]
-        image_files = {image_file.relative_to(path).as_posix(): image_file for image_file in image_files}
+        for f in path.glob("**/*"):
+            if f.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.webp']:
+                key = f.stem
+                image_files[key] = f
+
     if enable_metadata:
-        metadata_files = [*path.glob("**/*.json")]
-        metadata_files = {metadata_file.relative_to(path).as_posix(): metadata_file for metadata_file in metadata_files}
+        for f in path.glob("**/*.json"):
+            key = f.stem
+            metadata_files[key] = f
 
-    keys = None
-
-    def join(new_set):
-        return new_set & keys if keys is not None else new_set
-
+    key_sets = []
     if enable_text:
-        keys = join(text_files.keys())
-    elif enable_image:
-        keys = join(image_files.keys())
-    elif enable_metadata:
-        keys = join(metadata_files.keys())
+        key_sets.append(set(text_files.keys()))
+    if enable_image:
+        key_sets.append(set(image_files.keys()))
+    if enable_metadata:
+        key_sets.append(set(metadata_files.keys()))
 
-    keys = list(sorted(keys))
+    if key_sets:
+        keys = sorted(set.intersection(*key_sets))
+    else:
+        keys = []
 
     return keys, text_files, image_files, metadata_files
 

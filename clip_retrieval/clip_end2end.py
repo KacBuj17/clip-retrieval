@@ -20,6 +20,7 @@ def clip_end2end(url_list, output_folder, run_back=True):
     image_folder_name = os.path.join(output_folder, "images")
     embeddings_folder = os.path.join(output_folder, "embeddings")
     index_folder = os.path.join(output_folder, "index")
+    
     # img2dataset
     download(
         url_list,
@@ -31,7 +32,10 @@ def clip_end2end(url_list, output_folder, run_back=True):
         output_format="webdataset",
         url_col="URL",
         caption_col="TEXT",
+        number_sample_per_shard=500,
+
     )
+
     # Clip inference
     input_files = [image_folder_name + "/" + p for p in next(fs.walk(image_folder_name))[2] if p.endswith(".tar")]
     clip_inference(
@@ -42,7 +46,10 @@ def clip_end2end(url_list, output_folder, run_back=True):
         write_batch_size=100000,
         batch_size=512,
         cache_path=None,
+        wds_image_key="jpg",
+        wds_caption_key="json"
     )
+
     # Clip index
     os.mkdir(index_folder)
     clip_index(embeddings_folder, index_folder=index_folder)

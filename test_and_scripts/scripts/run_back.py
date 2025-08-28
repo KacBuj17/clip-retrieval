@@ -16,7 +16,7 @@ def main():
         indices_paths=indice_path, 
         clip_model="ViT-B/32",
         enable_mclip_option=True, 
-        provide_aesthetic_embeddings=True
+        provide_aesthetic_embeddings=False
     )
     
 

@@ -1,0 +1,16 @@
+.venv
+__pycache__/
+
+.vscode/
+.idea/
+
+.git
+.gitignore
+
+*.log
+*.tmp
+
+clip_retrieval.egg-info/
+
+node_modules
+**/node_modules

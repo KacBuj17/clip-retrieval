@@ -8,11 +8,12 @@ def main():
     indice_name = 'example_index'
     input_excel = "requests.xlsx"
     output_csv = "results.csv"
+    num_images = 5
 
     df = pd.read_excel(input_excel)
     requests = df["Anotacja"].tolist()
 
-    client = ClipClient(url=url, indice_name=indice_name)
+    client = ClipClient(url=url, indice_name=indice_name, num_images=num_images)
 
     results_data = []
     for text in requests:

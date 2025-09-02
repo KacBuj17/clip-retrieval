@@ -1,16 +1,15 @@
-.venv
-__pycache__/
+**/.venv
+**/__pycache__/
 
-.vscode/
-.idea/
+**/.vscode/
+**/.idea/
 
-.git
-.gitignore
+**/.git
+**/.gitignore
 
-*.log
-*.tmp
+**/*.log
+**/*.tmp
 
-clip_retrieval.egg-info/
+**/clip_retrieval.egg-info/
 
-node_modules
 **/node_modules

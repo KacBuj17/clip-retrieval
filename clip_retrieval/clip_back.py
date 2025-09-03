@@ -965,7 +965,7 @@ def clip_back(
     use_arrow=False,
     provide_safety_model=False,
     provide_violence_detector=False,
-    provide_aesthetic_embeddings=True,
+    provide_aesthetic_embeddings=False,
 ):
     """main entry point of clip back, start the endpoints"""
     print("starting boot of clip back")

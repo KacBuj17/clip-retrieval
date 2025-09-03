@@ -948,6 +948,9 @@ def load_clip_indices(
 
     return clip_resources
 
+class HealthCheck(Resource):
+    def get(self):
+        return {"status": "ok"}, 200
 
 # reorder_metadata_by_ivf_index allows faster data retrieval of knn results by re-ordering the metadata by the ivf clusters
 def clip_back(
@@ -1013,6 +1016,7 @@ def clip_back(
             "clip_resources": clip_resources,
         },
     )
+    api.add_resource(HealthCheck, "/health")
     CORS(app)
     LOGGER.info("starting!")
     app.run(host="0.0.0.0", port=port, debug=False)

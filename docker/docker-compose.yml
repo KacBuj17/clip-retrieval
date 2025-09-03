@@ -9,9 +9,9 @@ services:
         sleep 5;
         source .venv/bin/activate;
         cd /app/test_and_scripts/test;
-        if [ ! -f output_folder/.init_done ]; then
-          clip-retrieval end2end test_10000.parquet output_folder;
-          touch output_folder/.init_done;
+        if [ ! -f ${OUTPUT_FOLDER}/.init_done ]; then
+          clip-retrieval end2end test_10000.parquet ${OUTPUT_FOLDER};
+          touch ${OUTPUT_FOLDER}/.init_done;
         else
           echo 'Init already done, skipping';
         fi
@@ -19,7 +19,7 @@ services:
     restart: "no"
     shm_size: 2g
     volumes:
-      - clip-data:/app/test_and_scripts/test/output_folder
+      - clip-data:/app/test_and_scripts/test/${OUTPUT_FOLDER}
     deploy:
       resources:
         reservations:
@@ -34,18 +34,18 @@ services:
     container_name: clip-retrieval
     env_file: .env
     ports:
-      - "8000:8000"
+      - "${HOST_PORT}:${BACKEND_PORT}"
     command: >
       bash -c "
         sleep 5;
         source .venv/bin/activate;
         cd /app/test_and_scripts/test;
-        clip-retrieval back --port 8000 --indices_paths output_folder/indices_paths.json
+        clip-retrieval back --port ${BACKEND_PORT} --indices_paths ${OUTPUT_FOLDER}/indices_paths.json
       "
     restart: on-failure
     shm_size: 2g
     volumes:
-      - clip-data:/app/test_and_scripts/test/output_folder
+      - clip-data:/app/test_and_scripts/test/${OUTPUT_FOLDER}
     deploy:
      resources:
        reservations:
@@ -54,7 +54,7 @@ services:
            count: all
            capabilities: [gpu]
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 20

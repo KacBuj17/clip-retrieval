@@ -6,8 +6,8 @@ import fsspec
 
 
 def main(run_back=False):
-    image_folder = "images_folder"
-    output_folder = "output_folder"
+    images_folder = os.environ.get("IMAGES_FOLDER", "images_folder")
+    output_folder = os.environ.get("OUTPUT_FOLDER", "output_folder")
 
     fs, output_folder_in_fs = fsspec.core.url_to_fs(output_folder)
     print(output_folder_in_fs)
@@ -17,7 +17,7 @@ def main(run_back=False):
     index_folder = os.path.join(output_folder, "index")
 
     clip_inference(
-        input_dataset=image_folder,
+        input_dataset=images_folder,
         output_folder=embeddings_folder,
         input_format="files",
         enable_metadata=False,

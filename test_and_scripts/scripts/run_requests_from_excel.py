@@ -2,13 +2,17 @@ import time
 import json
 import pandas as pd
 from clip_retrieval.clip_client import ClipClient
+import os
 
 def main():
-    url = 'http://127.0.0.1:1234/knn-service'
-    indice_name = 'example_index'
-    input_excel = "requests.xlsx"
-    output_csv = "results.csv"
-    num_images = 5
+    backend_host = os.environ.get("BACKEND_HOST", "127.0.0.1")
+    backend_port = os.environ.get("BACKEND_PORT", "8000")
+    url = f"http://{backend_host}:{backend_port}/knn-service"
+
+    indice_name = os.environ.get("INDICE_NAME", "example_index")
+    input_excel = os.environ.get("INPUT_EXCEL", "requests.xlsx")
+    output_csv = os.environ.get("OUTPUT_CSV", "results.csv")
+    num_images = int(os.environ.get("NUM_IMAGES", 5))
 
     df = pd.read_excel(input_excel)
     requests = df["Anotacja"].tolist()

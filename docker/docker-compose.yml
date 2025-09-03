@@ -1,0 +1,59 @@
+services:
+  clip-init:
+    image: clip-retrieval:latest
+    container_name: clip-init
+    profiles: ["init"]
+    env_file: .env
+    command: >
+      bash -c "
+        sleep 5;
+        source .venv/bin/activate;
+        cd /app/test_and_scripts/test;
+        clip-retrieval end2end test_10000.parquet output_folder
+      "
+    restart: "no"
+    shm_size: 2g
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - clip-data:/app/test_and_scripts/test/output_folder
+
+  clip-back:
+    image: clip-retrieval:latest
+    container_name: clip-retrieval
+    env_file: .env
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "
+        sleep 5;
+        source .venv/bin/activate;
+        cd /app/test_and_scripts/test;
+        clip-retrieval back --port 8000 --indices_paths output_folder/indices_paths.json
+      "
+    restart: on-failure
+    shm_size: 2g
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - clip-data:/app/test_and_scripts/test/output_folder
+
+  requests-client:
+    image: clip-retrieval:latest
+    container_name: requests-client
+    env_file: .env
+    command: >
+      bash -c "
+        sleep 5;
+        source .venv/bin/activate;
+        python /app/test_and_scripts/scripts/run_requests_from_excel.py
+      "
+    depends_on:
+      - clip-back
+    restart: on-failure
+    shm_size: 512m
+
+volumes:
+  clip-data:

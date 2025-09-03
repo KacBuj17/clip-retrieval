@@ -5,7 +5,7 @@ from clip_retrieval import clip_back
 import fsspec
 
 
-def main(run_back=True):
+def main(run_back=False):
     image_folder = "images_folder"
     output_folder = "output_folder"
 

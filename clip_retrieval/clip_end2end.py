@@ -3,7 +3,7 @@
 import fire
 
 
-def clip_end2end(url_list, output_folder, run_back=True):
+def clip_end2end(url_list, output_folder, run_back=False):
     """main entry point of clip end2end"""
 
     import os  # pylint: disable=import-outside-toplevel

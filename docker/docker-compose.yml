@@ -4,16 +4,19 @@ services:
     container_name: clip-init
     profiles: ["init"]
     env_file: .env
-    entrypoint: >
+    entrypoint: |
       /bin/bash -c "
-        sleep 5;
-        source .venv/bin/activate;
-        cd /app/test_and_scripts/test;
+        sleep 5
+
+        source .venv/bin/activate
+
+        cd /app/test_and_scripts/test
+        
         if [ ! -f ${OUTPUT_FOLDER}/.init_done ]; then
-          clip-retrieval end2end test_10000.parquet ${OUTPUT_FOLDER};
-          touch ${OUTPUT_FOLDER}/.init_done;
+          clip-retrieval end2end test_10000.parquet ${OUTPUT_FOLDER}
+          touch ${OUTPUT_FOLDER}/.init_done
         else
-          echo 'Init already done, skipping';
+          echo 'Init already done, skipping'
         fi
       "
     restart: "no"
@@ -31,34 +34,37 @@ services:
 
   clip-back:
     image: clip-retrieval:latest
-    container_name: clip-retrieval
+    container_name: clip-back
     env_file: .env
     ports:
       - "${HOST_PORT}:${BACKEND_PORT}"
-    command: >
-      bash -c "
-        sleep 5;
-        source .venv/bin/activate;
-        cd /app/test_and_scripts/test;
-        clip-retrieval back --port ${BACKEND_PORT} --indices_paths ${OUTPUT_FOLDER}/indices_paths.json
-      "
+    entrypoint: |
+      /bin/bash -c '
+      sleep 5
+
+      source .venv/bin/activate
+
+      cd /app/test_and_scripts/test
+
+      clip-retrieval back --port ${BACKEND_PORT} --indices_paths ${OUTPUT_FOLDER}/indices_paths.json
+      '
     restart: on-failure
     shm_size: 2g
     volumes:
       - clip-data:/app/test_and_scripts/test/${OUTPUT_FOLDER}
     deploy:
-     resources:
-       reservations:
-         devices:
-         - driver: nvidia
-           count: all
-           capabilities: [gpu]
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 20
-      start_period: 60s
+      start_period: 120s
 
   requests-client:
     image: clip-retrieval:latest
@@ -76,7 +82,6 @@ services:
       clip-back:
         condition: service_healthy
     restart: on-failure
-    shm_size: 512m
 
 volumes:
   clip-data:

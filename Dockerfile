@@ -15,4 +15,6 @@ RUN chmod +x install_fixed.sh \
     && pip cache purge \
     && rm -rf /tmp/* /var/tmp/*
 
+RUN rm -f install_fixed.sh setup.py Makefile requirements.txt README.md
+
 CMD ["bash"]

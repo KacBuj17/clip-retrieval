@@ -6,10 +6,29 @@
 
 **/.git
 **/.gitignore
+**/.gitpod.DockerFile
+**/.gitpod.yml
+**/.github/
+**/.dockerignore
 
 **/*.log
 **/*.tmp
 
 **/clip_retrieval.egg-info/
-
 **/node_modules
+**/build/
+**/doc_assets/
+**/docs/
+**/notebook/
+**/tests/
+**/docker/
+
+**/Dockerfile
+**/HISTORY.md
+**/README_FIXED.md
+**/LICENSE
+
+**/.pylintrc
+**/mypy.ini
+**/pytest.ini
+**/requirements-test.txt

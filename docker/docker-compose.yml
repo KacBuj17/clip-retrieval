@@ -61,10 +61,10 @@ services:
             capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/health || exit 1"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 20
-      start_period: 120s
+      start_period: 300s
 
   requests-client:
     image: clip-retrieval:latest

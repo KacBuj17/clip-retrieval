@@ -17,10 +17,9 @@ pip install "setuptools<80"
 if ! command -v npm &> /dev/null; then
     echo "npm not found - installing..."
     if command -v apt-get &> /dev/null; then
-        sudo apt-get update
-        sudo apt-get install -y npm
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y npm
+        apt-get update && \
+        apt-get install -y npm && \
+        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
     else
         echo "Unknown package manager – please install Node.js manually."
         exit 1
@@ -28,6 +27,14 @@ if ! command -v npm &> /dev/null; then
 else
     echo "npm installed - skipping"
 fi
+
+# Clean npm cache
+echo "Cleaning npm cache..."
+npm cache clean --force || true
+
+# Remove leftover npm logs
+rm -rf ~/.npm/_logs
+
 
 # Install frontend dependencies and build frontend if npm is available
 if command -v npm &> /dev/null; then

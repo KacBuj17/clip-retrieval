@@ -1,6 +1,6 @@
 services:
   clip-init:
-    image: clip-retrieval:latest
+    image: kacbuj17/clip-retrieval:${CLIP_RETRIEVAL_VERSION}
     container_name: clip-init
     profiles: ["init"]
     env_file: .env
@@ -33,7 +33,7 @@ services:
 
 
   clip-back:
-    image: clip-retrieval:latest
+    image: kacbuj17/clip-retrieval:${CLIP_RETRIEVAL_VERSION}
     container_name: clip-back
     env_file: .env
     ports:
@@ -67,7 +67,7 @@ services:
       start_period: 300s
 
   requests-client:
-    image: clip-retrieval:latest
+    image: kacbuj17/clip-retrieval:${CLIP_RETRIEVAL_VERSION}
     container_name: requests-client
     env_file: .env
     volumes:

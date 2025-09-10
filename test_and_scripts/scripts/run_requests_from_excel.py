@@ -9,9 +9,11 @@ def main():
     backend_port = os.environ.get("BACKEND_PORT", "8000")
     url = f"http://{backend_host}:{backend_port}/knn-service"
 
+    resources_folder = os.environ.get("RESOURCES_FOLDER", "resources_folder")
+
     indice_name = os.environ.get("INDICE_NAME", "example_index")
-    input_excel = os.environ.get("INPUT_EXCEL", "requests.xlsx")
-    output_csv = os.environ.get("OUTPUT_CSV", "results.csv")
+    input_excel = os.path.join(resources_folder, os.environ.get("INPUT_EXCEL", "requests.xlsx"))
+    output_csv = os.path.join(resources_folder, os.environ.get("OUTPUT_CSV", "results.csv"))
     num_images = int(os.environ.get("NUM_IMAGES", 5))
 
     df = pd.read_excel(input_excel)

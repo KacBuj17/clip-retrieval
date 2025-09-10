@@ -7,22 +7,20 @@ services:
     entrypoint: |
       /bin/bash -c "
         sleep 5
-
         source .venv/bin/activate
-
-        cd /app/test_and_scripts/test
+        cd /app/test_and_scripts/scripts
         
-        if [ ! -f ${OUTPUT_FOLDER}/.init_done ]; then
-          clip-retrieval end2end test_10000.parquet ${OUTPUT_FOLDER}
-          touch ${OUTPUT_FOLDER}/.init_done
+        if [ ! -f ${RESOURCES_FOLDER}/.init_done ]; then
+          python end2end_customData.py
+          touch ${RESOURCES_FOLDER}/.init_done
         else
           echo 'Init already done, skipping'
         fi
       "
-    restart: "no"
+    restart: on-failure
     shm_size: 2g
     volumes:
-      - clip-data:/app/test_and_scripts/test/${OUTPUT_FOLDER}
+      - ./clip-data:/app/test_and_scripts/scripts/${RESOURCES_FOLDER}
     deploy:
       resources:
         reservations:
@@ -41,17 +39,14 @@ services:
     entrypoint: |
       /bin/bash -c '
       sleep 5
-
       source .venv/bin/activate
-
-      cd /app/test_and_scripts/test
-
-      clip-retrieval back --port ${BACKEND_PORT} --indices_paths ${OUTPUT_FOLDER}/indices_paths.json
+      cd /app/test_and_scripts/scripts
+      python run_back.py
       '
     restart: on-failure
     shm_size: 2g
     volumes:
-      - clip-data:/app/test_and_scripts/test/${OUTPUT_FOLDER}
+      - ./clip-data:/app/test_and_scripts/scripts/${RESOURCES_FOLDER}
     deploy:
       resources:
         reservations:
@@ -71,18 +66,15 @@ services:
     container_name: requests-client
     env_file: .env
     volumes:
-      - clip-scripts:/app/test_and_scripts/scripts
+      - ./clip-data:/app/test_and_scripts/scripts/${RESOURCES_FOLDER}
     command: >
       bash -c "
         sleep 5;
         source .venv/bin/activate;
-        python /app/test_and_scripts/scripts/run_requests_from_excel.py
+        cd /app/test_and_scripts/scripts;
+        python run_requests_from_excel.py
       "
     depends_on:
       clip-back:
         condition: service_healthy
     restart: on-failure
-
-volumes:
-  clip-data:
-  clip-scripts:

@@ -3,11 +3,13 @@ from clip_retrieval import clip_inference
 from clip_retrieval import clip_index
 from clip_retrieval import clip_back
 import fsspec
+import sys
 
 
 def main(run_back=False):
-    images_folder = os.environ.get("IMAGES_FOLDER", "images_folder")
-    output_folder = os.environ.get("OUTPUT_FOLDER", "output_folder")
+    resources_folder = os.environ.get("RESOURCES_FOLDER", "images_folder")
+    images_folder = os.path.join(resources_folder, os.environ.get("IMAGES_FOLDER", "images_folder"))
+    output_folder = os.path.join(resources_folder, os.environ.get("OUTPUT_FOLDER", "output_folder"))
 
     fs, output_folder_in_fs = fsspec.core.url_to_fs(output_folder)
     print(output_folder_in_fs)
@@ -47,4 +49,8 @@ def main(run_back=False):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"[FATAL] Unhandled exception: {e}", file=sys.stderr)
+        sys.exit(1)

@@ -1,17 +1,12 @@
 from clip_retrieval import clip_back
-import fsspec
 import os
 
 def main():
-    output_folder = os.environ.get("OUTPUT_FOLDER", "output_folder")
-    indice_name = os.environ.get("INDICE_NAME", "example_index")
+    resources_folder = os.environ.get("RESOURCES_FOLDER", "images_folder")
+    output_folder = os.path.join(resources_folder, os.environ.get("OUTPUT_FOLDER", "output_folder"))
     backend_port = os.environ.get("BACKEND_PORT", "8000")
 
-    index_folder = os.path.join(output_folder, "index")
     indice_path = os.path.join(output_folder, "indices_paths.json")
-
-    with fsspec.open(indice_path, "w") as f:
-        f.write(f'{{"{indice_name}": "{index_folder}"}}')
 
     clip_back(
         port=backend_port, 

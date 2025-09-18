@@ -2,7 +2,7 @@ from clip_retrieval import clip_back
 import os
 
 def main():
-    resources_folder = os.environ.get("RESOURCES_FOLDER", "images_folder")
+    resources_folder = os.environ.get("RESOURCES_FOLDER", "resources")
     output_folder = os.path.join(resources_folder, os.environ.get("OUTPUT_FOLDER", "output_folder"))
     backend_port = os.environ.get("BACKEND_PORT", "8000")
 

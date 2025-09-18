@@ -1,13 +1,14 @@
-import os
 from clip_retrieval import clip_inference
 from clip_retrieval import clip_index
 from clip_retrieval import clip_back
 import fsspec
+import time
+import json
 import sys
-
+import os
 
 def main(run_back=False):
-    resources_folder = os.environ.get("RESOURCES_FOLDER", "images_folder")
+    resources_folder = os.environ.get("RESOURCES_FOLDER", "resources")
     images_folder = os.path.join(resources_folder, os.environ.get("IMAGES_FOLDER", "images_folder"))
     output_folder = os.path.join(resources_folder, os.environ.get("OUTPUT_FOLDER", "output_folder"))
 
@@ -18,12 +19,13 @@ def main(run_back=False):
     embeddings_folder = os.path.join(output_folder, "embeddings")
     index_folder = os.path.join(output_folder, "index")
 
+    inference_start_time = time.time()
     clip_inference(
         input_dataset=images_folder,
         output_folder=embeddings_folder,
         input_format="files",
         enable_metadata=False,
-        enable_text=False,
+        enable_text=True,
         write_batch_size=100000,
         batch_size=512,
         cache_path=None,
@@ -31,9 +33,25 @@ def main(run_back=False):
         mclip_model="sentence-transformers/clip-ViT-B-32-multilingual-v1",
         use_mclip=True,
     )
+    inference_stop_time = time.time()
+    inference_duration = inference_stop_time - inference_start_time
     
     os.mkdir(index_folder)
+
+    index_start_time = time.time()
     clip_index(embeddings_folder, index_folder=index_folder)
+    index_stop_time = time.time()
+    index_duration = index_stop_time - index_start_time
+
+    stats = {
+        "inference_duration": inference_duration,
+        "index_duration": index_duration
+    }
+
+    output_file = os.path.join(resources_folder, "stats.json")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(stats, f, indent=4)
 
     indice_path = os.path.join(output_folder, "indices_paths.json")
     with fsspec.open(indice_path, "w") as f:

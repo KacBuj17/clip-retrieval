@@ -9,8 +9,10 @@ def to_list(x):
         return []
     return [f.strip() for f in str(x).replace(',', ';').split(';') if f.strip()]
 
+
 def remove_last_extension(path: str) -> str:
     return os.path.splitext(path)[0]
+
 
 def load_annotations(path_excel: str, sheet_name: str = "Arkusz1") -> pd.DataFrame:
     ann = pd.read_excel(path_excel, sheet_name=sheet_name)
@@ -50,28 +52,33 @@ def load_results(path_csv: str) -> pd.DataFrame:
 def recall_precision_at_k(relevant: list, retrieved: list, k: int) -> tuple[float, float]:
     k = min(k, len(retrieved))
     retrieved_k = retrieved[:k]
-    hits_k = len([img for img in retrieved_k if any(a in img for a in relevant)])
+    hits_set = set()
+    for r in relevant:
+        if any(r in img for img in retrieved_k):
+            hits_set.add(r)
+    hits_k = len(hits_set)
     recall_k = hits_k / len(relevant) if relevant else 0.0
     precision_k = hits_k / k if k else 0.0
     return round(recall_k, 2), round(precision_k, 2)
 
 
 def recall_at_50(relevant: list, retrieved: list) -> float:
-    k = min(50, len(retrieved))
-    retrieved_50 = retrieved[:k]
-    hits_50 = len([img for img in retrieved_50 if any(a in img for a in relevant)])
-    return round(hits_50 / len(relevant), 2) if relevant else 0.0
+    retrieved_50 = retrieved[:50]
+    hits_set = set()
+    for r in relevant:
+        if any(r in img for img in retrieved_50):
+            hits_set.add(r)
+    return round(len(hits_set) / len(relevant), 2) if relevant else 0.0
 
 
 def average_precision(relevant: list, retrieved: list) -> float:
-    if not relevant:
-        return 0.0
-    hits = 0
+    hits = set()
     precisions = []
     for idx, img in enumerate(retrieved, start=1):
-        if any(a in img for a in relevant):
-            hits += 1
-            precisions.append(hits / idx)
+        newly_hit = [r for r in relevant if r not in hits and r in img]
+        if newly_hit:
+            hits.update(newly_hit)
+            precisions.append(len(hits) / idx)
     return round(sum(precisions) / len(relevant), 2)
 
 
@@ -122,10 +129,12 @@ def evaluate(ann_path, res_path, out_path):
     df_metrics.to_csv(f"{out_path}/metrics_per_query.csv", index=False, encoding="utf-8")
     pd.DataFrame([summary]).to_csv(f"{out_path}/metrics_summary.csv", index=False, encoding="utf-8")
 
+
 def fix_csv_simple(input_path: str, output_path: str):
     df = pd.read_csv(input_path)
     df['request'] = df['request'].str.replace('\n', ' ').str.strip()
     df.to_csv(output_path, index=False)
+
 
 def main():
     try:

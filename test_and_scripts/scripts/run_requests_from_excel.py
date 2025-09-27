@@ -4,6 +4,7 @@ import pandas as pd
 from clip_retrieval.clip_client import ClipClient
 import os
 
+
 def main():
     backend_host = os.environ.get("BACKEND_HOST", "127.0.0.1")
     backend_port = os.environ.get("BACKEND_PORT", "8000")
@@ -19,7 +20,8 @@ def main():
     df = pd.read_excel(input_excel)
     requests = df["Anotacja"].tolist()
 
-    client = ClipClient(url=url, indice_name=indice_name, num_images=num_images)
+    client = ClipClient(url=url, indice_name=indice_name, num_images=num_images, deduplicate=False,
+                        use_safety_model=False, use_violence_detector=False)
 
     results_data = []
     for text in requests:
@@ -54,6 +56,6 @@ def main():
     results_df = pd.DataFrame(results_data)
     results_df.to_csv(output_csv, index=False, encoding="utf-8")
 
+
 if __name__ == "__main__":
     main()
-

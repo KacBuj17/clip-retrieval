@@ -32,3 +32,6 @@
 **/mypy.ini
 **/pytest.ini
 **/requirements-test.txt
+
+**/resources
+**/clip-data

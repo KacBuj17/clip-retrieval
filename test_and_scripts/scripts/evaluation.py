@@ -15,17 +15,34 @@ def remove_ext(path):
 
 def load_annotations(path, sheet="Arkusz1"):
     df = pd.read_excel(path, sheet_name=sheet)
-    df = df.rename(columns={"Anotacja": "query_id", "Nazwa zdjęcia - pliku": "relevant_images"})
-    df["relevant_images"] = df["relevant_images"].apply(lambda x: [remove_ext(i) for i in to_list(x)])
-    return df.groupby("query_id")["relevant_images"].sum().reset_index()
-
+    df = df.rename(columns={
+        "Anotacja": "query_id",
+        "Nazwa zdjęcia - pliku": "relevant_images"
+    })
+    df["relevant_images"] = df["relevant_images"].apply(
+        lambda x: [remove_ext(i) for i in to_list(x)]
+    )
+    df = df.groupby("query_id", as_index=False).agg({
+        "relevant_images": "sum"
+    })
+    df["relevant_count"] = df["relevant_images"].apply(len)
+    return df
 
 def load_results(path):
     df = pd.read_csv(path, encoding="utf-8")
-    df = df.rename(columns={"request": "query_id", "response": "retrieved_images", "time_sec": "query_time_sec"})
+    df = df.rename(columns={"request": "query_id",
+                            "response": "retrieved_images",
+                            "time_sec": "query_time_sec"})
     df["retrieved_images"] = df["retrieved_images"].apply(
-        lambda x: [remove_ext(d["image_path"]) for d in json.loads(x)])
-    return df.groupby("query_id").agg({"retrieved_images": "sum", "query_time_sec": "mean"}).reset_index()
+        lambda x: [os.path.splitext(os.path.basename(d["image_path"]))[0]
+                   for d in json.loads(x)]
+    )
+    df = df.groupby("query_id").agg({
+        "retrieved_images": lambda x: list(set(sum(x, []))),
+        "query_time_sec": "mean"
+    }).reset_index()
+    df["retrieved_count"] = df["retrieved_images"].apply(len)
+    return df
 
 
 def recall_precision_at_k(rel, ret, k):
@@ -50,7 +67,8 @@ def average_precision(rel, ret):
 
 
 def compute_metrics(qid, rel, ret, time):
-    if not rel: return None
+    if not rel:
+        return None
     R = len(rel)
     rec, prec = recall_precision_at_k(rel, ret, R)
     return {
@@ -59,6 +77,8 @@ def compute_metrics(qid, rel, ret, time):
         "Precision@K": prec,
         "Recall@50": recall_at_50(rel, ret),
         "AP": average_precision(rel, ret),
+        "retrieved_count": len(ret),
+        "relevant_count": len(rel),
         "query_time_sec": round(time, 2)
     }
 

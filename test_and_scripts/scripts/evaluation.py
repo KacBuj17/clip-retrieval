@@ -20,7 +20,7 @@ def load_annotations(path, sheet="Arkusz1"):
         "Nazwa zdjęcia - pliku": "relevant_images"
     })
     df["relevant_images"] = df["relevant_images"].apply(
-        lambda x: [remove_ext(i) for i in to_list(x)]
+        lambda x: list(dict.fromkeys(remove_ext(i) for i in to_list(x)))
     )
     df = df.groupby("query_id", as_index=False).agg({
         "relevant_images": "sum"
@@ -44,27 +44,34 @@ def load_results(path):
     df["retrieved_count"] = df["retrieved_images"].apply(len)
     return df
 
-
 def recall_precision_at_k(rel, ret, k):
     k = min(k, len(ret))
-    hits = {r for r in rel if any(r in img for img in ret[:k])}
-    return round(len(hits) / len(rel) if rel else 0, 2), round(len(hits) / k if k else 0, 2)
-
+    hits = set()
+    for img in ret[:k]:
+        new_hit = next((r for r in rel if r not in hits and r in img), None)
+        if new_hit:
+            hits.add(new_hit)
+    recall = len(hits) / len(rel) if rel else 0
+    precision = len(hits) / k if k else 0
+    return round(recall, 2), round(precision, 2)
 
 def recall_at_50(rel, ret):
-    hits = {r for r in rel if any(r in img for img in ret[:50])}
+    hits = set()
+    for img in ret[:50]:
+        new_hit = next((r for r in rel if r not in hits and r in img), None)
+        if new_hit:
+            hits.add(new_hit)
     return round(len(hits) / len(rel) if rel else 0, 2)
 
-
 def average_precision(rel, ret):
-    hits, precisions = set(), []
+    hits = set()
+    precisions = []
     for i, img in enumerate(ret, 1):
-        new = [r for r in rel if r not in hits and r in img]
-        if new:
-            hits.update(new)
+        new_hit = next((r for r in rel if r not in hits and r in img), None)
+        if new_hit:
+            hits.add(new_hit)
             precisions.append(len(hits) / i)
     return round(sum(precisions) / len(rel), 2) if rel else 0
-
 
 def compute_metrics(qid, rel, ret, time):
     if not rel:

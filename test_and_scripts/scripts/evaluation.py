@@ -42,7 +42,7 @@ def load_results(path):
                    for d in json.loads(x)]
     )
     df = df.groupby("query_id").agg({
-        "retrieved_images": lambda x: list(set(sum(x, []))),
+        "retrieved_images": lambda x: list(dict.fromkeys(sum(x, []))),
         "query_time_sec": "mean"
     }).reset_index()
     df["retrieved_count"] = df["retrieved_images"].apply(len)
@@ -95,7 +95,7 @@ def compute_metrics(qid, rel, ret, time):
         "AP": round(average_precision(rel, ret), 2),
         "retrieved_count": len(ret),
         "relevant_count": len(rel),
-        "query_time_sec": round(time, 2)
+        "query_time_sec": round(time, 3)
     }
 
 

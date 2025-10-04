@@ -134,11 +134,6 @@ def save_metrics(metrics, mean_metrics, out_path):
     print(metrics, "\n=== Mean metrics ===\n", mean_metrics)
 
 
-def read_and_fix_csv(path):
-    df = pd.read_csv(path)
-    df['request'] = df['request'].str.replace('\n', ' ').str.strip()
-
-
 def dynamic_k_threshold(relevant_count):
     if relevant_count <= 20:
         return 20
@@ -234,7 +229,6 @@ def main():
     out_paths = ["resources/output_clip", "resources/output_vlm", "resources/output_vlm_synonyms"]
 
     for res_path, out_path in zip(res_paths, out_paths):
-        read_and_fix_csv(res_path)
         metrics, mean_metrics = evaluate(ann_path, res_path)
         save_metrics(metrics, mean_metrics, out_path)
 

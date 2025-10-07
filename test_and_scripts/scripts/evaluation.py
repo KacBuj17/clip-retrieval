@@ -29,6 +29,7 @@ def load_annotations(path, sheet="Arkusz1"):
         "relevant_images": "sum"
     })
     df["relevant_count"] = df["relevant_images"].apply(len)
+    df['query_id'] = df['query_id'].astype(str).str.replace(r'[\r\n]+', ' ', regex=True).str.strip()
     return df
 
 
@@ -46,6 +47,7 @@ def load_results(path):
         "query_time_sec": "mean"
     }).reset_index()
     df["retrieved_count"] = df["retrieved_images"].apply(len)
+    df['query_id'] = df['query_id'].astype(str).str.replace(r'[\r\n]+', ' ', regex=True).str.strip()
     return df
 
 

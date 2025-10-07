@@ -1,0 +1,54 @@
+selected_columns:
+  - Precision@K
+  - Recall@K
+  - retrieved_count
+  - correctly_retrieved
+
+UC1:
+  - Black person with a gun
+  - A police officer standing next to a vehicle
+  - Family on a beach
+  - Gun in a holster
+  - Gun on a table
+  - Gun on a wall
+  - Half-naked woman with a rifle
+  - Hand holding a knife
+  - Man holding a pistol
+  - Man holding a rifle
+  - Person holding a knife
+  - Person holding a rifle
+  - Person holding a shotgun
+  - Person using a sniper rifle
+  - Woman holding a pistol
+  - Woman with a shotgun
+  - a dog in a car
+  - a person carrying a suspicious bag
+  - a person pointing a weapon at another person
+  - person next to a white building
+  - person playing violin outdoors
+  - woman in a red shirt and dark pants with a hat on her head
+
+UC2:
+  - A car with licence plate
+  - A gun in hand
+  - A military soldier
+  - A military tank
+  - A military vehicle
+  - A red sedan car
+  - A white BMW
+  - An orange house with a brown roof
+  - a bus with people inside
+  - a child holding a baloon
+  - a dog wearing clothes
+  - man in gray hoodie and jeans
+
+UC3:
+  - Screenshot of Whatsapp
+  - Screenshot of Whatsapp with attachment
+  - Screenshot of Whatsapp with audio attachment
+  - Screenshot of an email
+
+UC4:
+  - A child and a gun
+  - Multiple guns
+  - police officer + crowd

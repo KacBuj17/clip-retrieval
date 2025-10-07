@@ -34,14 +34,14 @@ def load_annotations(path, sheet="Arkusz1"):
     return df
 
 def dynamic_num_images_threshold(relevant_count):
-    if relevant_count <= 20:
+    if relevant_count <= 10:
         return 20
-    elif relevant_count <= 50:
+    elif relevant_count <= 25:
         return 50
-    elif relevant_count <= 100:
+    elif relevant_count <= 50:
         return 100
     else:
-        return relevant_count
+        return 2 * relevant_count
 
 def main():
     backend_host = os.environ.get("BACKEND_HOST", "127.0.0.1")
@@ -52,7 +52,7 @@ def main():
     indice_name = os.environ.get("INDICE_NAME", "example_index")
 
     input_excel = os.path.join(resources_folder, os.environ.get("INPUT_EXCEL", "Anotacje.xlsx"))
-    output_csv = os.path.join(resources_folder, os.environ.get("OUTPUT_CSV", "results.csv"))
+    output_csv = os.path.join(resources_folder, os.environ.get("OUTPUT_CSV", "results_clip.csv"))
 
     df = load_annotations(input_excel)
     requests = df[["query_id", "relevant_count"]].to_dict(orient="records")
@@ -95,7 +95,7 @@ def main():
 
         results_data.append({
             "request": text,
-            "relevant_count": num_images,
+            "retrieved_count": num_images,
             "response": json.dumps(clean_results, ensure_ascii=False),
             "time_sec": time_sec
         })

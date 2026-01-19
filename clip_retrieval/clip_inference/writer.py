@@ -1,12 +1,208 @@
-"""writer module saves embeddings"""
-
-import fsspec
-from io import BytesIO
 import json
 import math
+import uuid
+from io import BytesIO
+
+import fsspec
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import PointStruct
 
 
-class OutputSink:
+# ====================== MONGO ======================
+class MongoOutputSink:
+    """Mongo sink in style of NumpyOutputSink"""
+
+    def __init__(self, mongo_uri, db_name, collection_name,
+                 enable_text=True, enable_image=True, enable_metadata=True):
+        self.mongo_uri = mongo_uri
+        self.db_name = db_name
+        self.collection_name = collection_name
+        self.enable_text = enable_text
+        self.enable_image = enable_image
+        self.enable_metadata = enable_metadata
+
+        self.documents = []
+        self.client = None
+        self.db = None
+        self.collection = None
+
+    def _init_client(self):
+        if self.client is None:
+            self.client = MongoClient(self.mongo_uri, server_api=ServerApi('1'), connect=False)
+            self.db = self.client[self.db_name]
+            self.collection = self.db[self.collection_name]
+            try:
+                self.client.admin.command('ping')
+                print(f"[Mongo:{self.collection_name}] Connected")
+            except Exception as e:
+                print(f"[Mongo:{self.collection_name}] Connection error:", e)
+
+    def add(self, sample):
+        self._init_client()
+        # Handle image embeddings if they exist
+        if self.enable_image and sample["image_embs"] is not None:
+            n = sample["image_embs"].shape[0]
+            for i in range(n):
+                doc = {"_id": str(uuid.uuid4()), "embedding": sample["image_embs"][i].tolist(), "metadata": {}}
+                doc["metadata"]["image_path"] = sample["image_filename"][i]
+                if self.enable_metadata and sample["metadata"] is not None:
+                    meta = sample["metadata"][i]
+                    if isinstance(meta, str):
+                        try:
+                            meta = json.loads(meta)
+                        except Exception:
+                            meta = {"raw_metadata": meta}
+                    elif not isinstance(meta, dict):
+                        meta = dict(meta)
+                    doc["metadata"].update(meta)
+                self.documents.append(doc)
+
+        # Handle text embeddings if they exist
+        elif self.enable_text and sample["text_embs"] is not None:
+            n = sample["text_embs"].shape[0]
+            for i in range(n):
+                doc = {"_id": str(uuid.uuid4()), "embedding": sample["text_embs"][i].tolist(), "metadata": {}}
+                doc["metadata"]["caption"] = sample["text"][i]
+                if self.enable_metadata and sample["metadata"] is not None:
+                    meta = sample["metadata"][i]
+                    if isinstance(meta, str):
+                        try:
+                            meta = json.loads(meta)
+                        except Exception:
+                            meta = {"raw_metadata": meta}
+                    elif not isinstance(meta, dict):
+                        meta = dict(meta)
+                    doc["metadata"].update(meta)
+                self.documents.append(doc)
+
+    def flush(self):
+        if not self.documents:
+            return
+        self._init_client()
+        try:
+            self.collection.insert_many(self.documents)
+            print(f"[Mongo:{self.collection_name}] Inserted {len(self.documents)} documents")
+        except Exception as e:
+            print(f"[Mongo:{self.collection_name}] Error inserting documents:", e)
+        self.documents = []
+
+
+class MongoWriter:
+    """Writer class for MongoDB in buffer style"""
+
+    def __init__(self, mongo_uri, db_name, collection_name,
+                 enable_text=True, enable_image=True, enable_metadata=True):
+        self.sink = MongoOutputSink(mongo_uri, db_name, collection_name,
+                                    enable_text, enable_image, enable_metadata)
+
+    def __call__(self, batch):
+        self.sink.add(batch)
+
+    def flush(self):
+        self.sink.flush()
+
+
+# ====================== QDRANT ======================
+class QdrantOutputSink:
+    """Qdrant sink in buffer style like NumpyOutputSink"""
+
+    def __init__(self, url, api_key, collection_name="default",
+                 enable_text=True, enable_image=True, enable_metadata=True, vector_size=512):
+        self.url = url
+        self.api_key = api_key
+        self.collection_name = collection_name
+        self.enable_text = enable_text
+        self.enable_image = enable_image
+        self.enable_metadata = enable_metadata
+        self.vector_size = vector_size
+
+        self.points = []
+        self.client = None
+
+    def _init_client(self):
+        if self.client is None:
+            self.client = QdrantClient(url=self.url, api_key=self.api_key)
+            existing = [c.name for c in self.client.get_collections().collections]
+            if self.collection_name not in existing:
+                self.client.recreate_collection(
+                    collection_name=self.collection_name,
+                    vectors_config={"size": self.vector_size, "distance": "Cosine"}
+                )
+            print(f"[Qdrant:{self.collection_name}] Connected to Qdrant Cloud")
+
+    def add(self, sample):
+        self._init_client()
+        if self.enable_image and sample["image_embs"] is not None:
+            n = sample["image_embs"].shape[0]
+            for i in range(n):
+                point = PointStruct(
+                    id=str(uuid.uuid4()),
+                    vector=sample["image_embs"][i].tolist(),
+                    payload={"image_path": sample["image_filename"][i]}
+                )
+                if self.enable_metadata and sample["metadata"] is not None:
+                    meta = sample["metadata"][i]
+                    if isinstance(meta, str):
+                        try:
+                            meta = json.loads(meta)
+                        except Exception:
+                            meta = {"raw_metadata": meta}
+                    elif not isinstance(meta, dict):
+                        meta = dict(meta)
+                    point.payload.update(meta)
+                self.points.append(point)
+
+        elif self.enable_text and sample["text_embs"] is not None:
+            n = sample["text_embs"].shape[0]
+            for i in range(n):
+                point = PointStruct(
+                    id=str(uuid.uuid4()),
+                    vector=sample["text_embs"][i].tolist(),
+                    payload={"caption": sample["text"][i]}
+                )
+                if self.enable_metadata and sample["metadata"] is not None:
+                    meta = sample["metadata"][i]
+                    if isinstance(meta, str):
+                        try:
+                            meta = json.loads(meta)
+                        except Exception:
+                            meta = {"raw_metadata": meta}
+                    elif not isinstance(meta, dict):
+                        meta = dict(meta)
+                    point.payload.update(meta)
+                self.points.append(point)
+
+    def flush(self):
+        if not self.points:
+            return
+        self._init_client()
+        try:
+            self.client.upsert(collection_name=self.collection_name, points=self.points)
+            print(f"[Qdrant:{self.collection_name}] Inserted {len(self.points)} points")
+        except Exception as e:
+            print(f"[Qdrant:{self.collection_name}] Error inserting points:", e)
+        self.points = []
+
+
+class QdrantWriter:
+    """Qdrant writer in buffer style"""
+
+    def __init__(self, url, api_key, collection_name="default",
+                 enable_text=True, enable_image=True, enable_metadata=True, vector_size=512):
+        self.sink = QdrantOutputSink(url, api_key, collection_name,
+                                     enable_text, enable_image, enable_metadata,
+                                     vector_size)
+
+    def __call__(self, batch):
+        self.sink.add(batch)
+
+    def flush(self):
+        self.sink.flush()
+
+
+class NumpyOutputSink:
     """This output sink can save image, text embeddings as npy and metadata as parquet"""
 
     def __init__(self, output_folder, enable_text, enable_image, enable_metadata, partition_id, output_partition_count):
@@ -116,7 +312,7 @@ class NumpyWriter:
     """the numpy writer writes embeddings to folders img_emb, text_emb, and metadata"""
 
     def __init__(self, partition_id, output_folder, enable_text, enable_image, enable_metadata, output_partition_count):
-        self.sink = OutputSink(
+        self.sink = NumpyOutputSink(
             output_folder, enable_text, enable_image, enable_metadata, partition_id, output_partition_count
         )
 

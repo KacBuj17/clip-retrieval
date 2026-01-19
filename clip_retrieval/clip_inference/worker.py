@@ -14,6 +14,8 @@ from braceexpand import braceexpand
 from clip_retrieval.clip_inference.runner import Runner
 from clip_retrieval.clip_inference.mapper import ClipMapper
 from clip_retrieval.clip_inference.writer import NumpyWriter
+from clip_retrieval.clip_inference.writer import MongoWriter
+from clip_retrieval.clip_inference.writer import QdrantWriter
 from clip_retrieval.clip_inference.logger import LoggerWriter
 from clip_retrieval.clip_inference.reader import FilesReader, WebdatasetReader
 from all_clip import load_clip
@@ -38,6 +40,12 @@ def worker(
     use_mclip=False,
     use_jit=True,
     clip_cache_path=None,
+    writer_type="numpy",
+    mongo_uri = None,
+    mongo_db_name = None,
+    qdrant_url = None,
+    qdrant_api = None,
+    collection_name = None,
 ):
     """Start a worker"""
     print("Starting the worker", flush=True)
@@ -99,14 +107,31 @@ def worker(
         )
 
     def writer_builder(i):
-        return NumpyWriter(
-            partition_id=i,
-            output_folder=output_folder,
-            enable_text=enable_text,
-            enable_image=enable_image,
-            enable_metadata=enable_metadata,
-            output_partition_count=output_partition_count,
-        )
+        if writer_type == "mongo":
+            return MongoWriter(
+                mongo_uri=mongo_uri,
+                db_name=mongo_db_name,
+                collection_name=collection_name,
+                enable_text=True,
+                enable_image=True,
+                enable_metadata=True
+            )
+        elif writer_type == "qdrant":
+            return QdrantWriter(
+                url=qdrant_url,
+                api_key=qdrant_api,
+                collection_name=collection_name,
+                vector_size=512
+            )
+        elif writer_type == "numpy":
+            return NumpyWriter(
+                partition_id=i,
+                output_folder=output_folder,
+                enable_text=enable_text,
+                enable_image=enable_image,
+                enable_metadata=enable_metadata,
+                output_partition_count=output_partition_count,
+            )
 
     def logger_builder(i):
         return LoggerWriter(

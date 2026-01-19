@@ -98,6 +98,12 @@ def main(
     slurm_job_timeout=None,
     slurm_cache_path=None,
     slurm_verbose_wait=False,
+    writer_type="numpy",
+    mongo_uri = None,
+    mongo_db_name = None,
+    qdrant_url = None,
+    qdrant_api = None,
+    collection_name = None,
 ):
     # package arguments to pass on to the distributor
     local_args = dict(locals())

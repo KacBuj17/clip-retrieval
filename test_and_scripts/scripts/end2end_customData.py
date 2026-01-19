@@ -1,16 +1,23 @@
-from clip_retrieval import clip_inference
-from clip_retrieval import clip_index
-from clip_retrieval import clip_back
-import fsspec
-import time
 import json
-import sys
 import os
+import sys
+import time
+
+import fsspec
+import yaml
+
+from clip_retrieval import clip_back
+from clip_retrieval import clip_index
+from clip_retrieval import clip_inference
+
 
 def main(run_back=False):
     resources_folder = os.environ.get("RESOURCES_FOLDER", "resources")
     images_folder = os.path.join(resources_folder, os.environ.get("IMAGES_FOLDER", "images_folder"))
     output_folder = os.path.join(resources_folder, os.environ.get("OUTPUT_FOLDER", "output_folder"))
+
+    with open("db_config.yaml", "r") as f:
+        db_config = yaml.safe_load(f)
 
     fs, output_folder_in_fs = fsspec.core.url_to_fs(output_folder)
     print(output_folder_in_fs)
@@ -32,10 +39,16 @@ def main(run_back=False):
         clip_model="ViT-B/32",
         mclip_model="sentence-transformers/clip-ViT-B-32-multilingual-v1",
         use_mclip=True,
+        writer_type=db_config["writer_type"],
+        mongo_uri=db_config["mongo_uri"],
+        mongo_db_name=db_config["mongo_db_name"],
+        qdrant_url=db_config["qdrant_url"],
+        qdrant_api=db_config["qdrant_api"],
+        collection_name=db_config["collection_name"],
     )
     inference_stop_time = time.time()
     inference_duration = inference_stop_time - inference_start_time
-    
+
     os.mkdir(index_folder)
 
     index_start_time = time.time()
@@ -58,10 +71,10 @@ def main(run_back=False):
         f.write('{"example_index": "' + index_folder + '"}')
     if run_back:
         clip_back(
-            port=1234, 
-            indices_paths=indice_path, 
+            port=1234,
+            indices_paths=indice_path,
             clip_model="ViT-B/32",
-            enable_mclip_option=True, 
+            enable_mclip_option=True,
             provide_aesthetic_embeddings=False
         )
 

@@ -16,7 +16,7 @@ class MongoOutputSink:
 
     def __init__(self, mongo_uri, db_name, collection_name,
                  enable_text=True, enable_image=True, enable_metadata=True,
-                 batch_size=2048):
+                 batch_size=1024):
         self.mongo_uri = mongo_uri
         self.db_name = db_name
         self.collection_name = collection_name
@@ -45,43 +45,48 @@ class MongoOutputSink:
         self._init_client()
         new_docs = []
 
-        if self.enable_image and sample.get("image_embs") is not None:
+        if sample.get("image_embs") is not None:
             n = sample["image_embs"].shape[0]
-            for i in range(n):
-                doc = {"_id": str(uuid.uuid4()), "embedding": sample["image_embs"][i].tolist(), "metadata": {}}
-                doc["metadata"]["image_path"] = sample["image_filename"][i]
-                if self.enable_metadata and sample.get("metadata") is not None:
-                    meta = sample["metadata"][i]
-                    if isinstance(meta, str):
-                        try:
-                            meta = json.loads(meta)
-                        except Exception:
-                            meta = {"raw_metadata": meta}
-                    elif not isinstance(meta, dict):
-                        meta = dict(meta)
-                    doc["metadata"].update(meta)
-                new_docs.append(doc)
-
-        elif self.enable_text and sample.get("text_embs") is not None:
+        elif sample.get("text_embs") is not None:
             n = sample["text_embs"].shape[0]
-            for i in range(n):
-                doc = {"_id": str(uuid.uuid4()), "embedding": sample["text_embs"][i].tolist(), "metadata": {}}
-                doc["metadata"]["caption"] = sample["text"][i]
-                if self.enable_metadata and sample.get("metadata") is not None:
-                    meta = sample["metadata"][i]
-                    if isinstance(meta, str):
-                        try:
-                            meta = json.loads(meta)
-                        except Exception:
-                            meta = {"raw_metadata": meta}
-                    elif not isinstance(meta, dict):
-                        meta = dict(meta)
-                    doc["metadata"].update(meta)
-                new_docs.append(doc)
+        else:
+            return
+
+        for i in range(n):
+            sample_id = str(uuid.uuid4())
+
+            doc = {
+                "_id": sample_id,
+                "image_embedding": None,
+                "text_embedding": None,
+                "image_path": None,
+                "caption": None,
+                "metadata": {}
+            }
+
+            if self.enable_image and sample.get("image_embs") is not None:
+                doc["image_embedding"] = sample["image_embs"][i].tolist()
+                doc["image_path"] = sample["image_filename"][i]
+
+            if self.enable_text and sample.get("text_embs") is not None:
+                doc["text_embedding"] = sample["text_embs"][i].tolist()
+                doc["caption"] = sample["text"][i]
+
+            if self.enable_metadata and sample.get("metadata") is not None:
+                meta = sample["metadata"][i]
+                if isinstance(meta, str):
+                    try:
+                        meta = json.loads(meta)
+                    except Exception:
+                        meta = {"raw_metadata": meta}
+                elif not isinstance(meta, dict):
+                    meta = dict(meta)
+                doc["metadata"] = meta
+
+            new_docs.append(doc)
 
         self.documents.extend(new_docs)
 
-        # flush if batch_size reached
         if len(self.documents) >= self.batch_size:
             self.flush()
 
@@ -118,7 +123,7 @@ class QdrantOutputSink:
 
     def __init__(self, url, api_key, collection_name="default",
                  enable_text=True, enable_image=True, enable_metadata=True,
-                 vector_size=512, batch_size=2048):
+                 vector_size=512, batch_size=1024):
         self.url = url
         self.api_key = api_key
         self.collection_name = collection_name
@@ -138,7 +143,10 @@ class QdrantOutputSink:
             if self.collection_name not in existing:
                 self.client.recreate_collection(
                     collection_name=self.collection_name,
-                    vectors_config={"size": self.vector_size, "distance": "Cosine"}
+                    vectors_config={
+                        "image": {"size": self.vector_size, "distance": "Cosine"},
+                        "text": {"size": self.vector_size, "distance": "Cosine"}
+                    }
                 )
             print(f"[Qdrant:{self.collection_name}] Connected to Qdrant Cloud")
 
@@ -146,49 +154,48 @@ class QdrantOutputSink:
         self._init_client()
         new_points = []
 
-        if self.enable_image and sample.get("image_embs") is not None:
+        if sample.get("image_embs") is not None:
             n = sample["image_embs"].shape[0]
-            for i in range(n):
-                point = PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=sample["image_embs"][i].tolist(),
-                    payload={"image_path": sample["image_filename"][i]}
-                )
-                if self.enable_metadata and sample.get("metadata") is not None:
-                    meta = sample["metadata"][i]
-                    if isinstance(meta, str):
-                        try:
-                            meta = json.loads(meta)
-                        except Exception:
-                            meta = {"raw_metadata": meta}
-                    elif not isinstance(meta, dict):
-                        meta = dict(meta)
-                    point.payload.update(meta)
-                new_points.append(point)
-
-        elif self.enable_text and sample.get("text_embs") is not None:
+        elif sample.get("text_embs") is not None:
             n = sample["text_embs"].shape[0]
-            for i in range(n):
-                point = PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=sample["text_embs"][i].tolist(),
-                    payload={"caption": sample["text"][i]}
+        else:
+            return
+
+        for i in range(n):
+            sample_id = str(uuid.uuid4())
+
+            vectors = {}
+            payload = {}
+
+            if self.enable_image and sample.get("image_embs") is not None:
+                vectors["image"] = sample["image_embs"][i].tolist()
+                payload["image_path"] = sample["image_filename"][i]
+
+            if self.enable_text and sample.get("text_embs") is not None:
+                vectors["text"] = sample["text_embs"][i].tolist()
+                payload["caption"] = sample["text"][i]
+
+            if self.enable_metadata and sample.get("metadata") is not None:
+                meta = sample["metadata"][i]
+                if isinstance(meta, str):
+                    try:
+                        meta = json.loads(meta)
+                    except Exception:
+                        meta = {"raw_metadata": meta}
+                elif not isinstance(meta, dict):
+                    meta = dict(meta)
+                payload.update(meta)
+
+            new_points.append(
+                PointStruct(
+                    id=sample_id,
+                    vector=vectors,
+                    payload=payload
                 )
-                if self.enable_metadata and sample.get("metadata") is not None:
-                    meta = sample["metadata"][i]
-                    if isinstance(meta, str):
-                        try:
-                            meta = json.loads(meta)
-                        except Exception:
-                            meta = {"raw_metadata": meta}
-                    elif not isinstance(meta, dict):
-                        meta = dict(meta)
-                    point.payload.update(meta)
-                new_points.append(point)
+            )
 
         self.points.extend(new_points)
 
-        # flush if batch_size reached
         if len(self.points) >= self.batch_size:
             self.flush()
 

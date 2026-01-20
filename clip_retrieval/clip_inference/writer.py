@@ -12,16 +12,18 @@ from qdrant_client.http.models import PointStruct
 
 # ====================== MONGO ======================
 class MongoOutputSink:
-    """Mongo sink in style of NumpyOutputSink"""
+    """Mongo sink with batching"""
 
     def __init__(self, mongo_uri, db_name, collection_name,
-                 enable_text=True, enable_image=True, enable_metadata=True):
+                 enable_text=True, enable_image=True, enable_metadata=True,
+                 batch_size=2048):
         self.mongo_uri = mongo_uri
         self.db_name = db_name
         self.collection_name = collection_name
         self.enable_text = enable_text
         self.enable_image = enable_image
         self.enable_metadata = enable_metadata
+        self.batch_size = batch_size
 
         self.documents = []
         self.client = None
@@ -41,13 +43,14 @@ class MongoOutputSink:
 
     def add(self, sample):
         self._init_client()
-        # Handle image embeddings if they exist
-        if self.enable_image and sample["image_embs"] is not None:
+        new_docs = []
+
+        if self.enable_image and sample.get("image_embs") is not None:
             n = sample["image_embs"].shape[0]
             for i in range(n):
                 doc = {"_id": str(uuid.uuid4()), "embedding": sample["image_embs"][i].tolist(), "metadata": {}}
                 doc["metadata"]["image_path"] = sample["image_filename"][i]
-                if self.enable_metadata and sample["metadata"] is not None:
+                if self.enable_metadata and sample.get("metadata") is not None:
                     meta = sample["metadata"][i]
                     if isinstance(meta, str):
                         try:
@@ -57,15 +60,14 @@ class MongoOutputSink:
                     elif not isinstance(meta, dict):
                         meta = dict(meta)
                     doc["metadata"].update(meta)
-                self.documents.append(doc)
+                new_docs.append(doc)
 
-        # Handle text embeddings if they exist
-        elif self.enable_text and sample["text_embs"] is not None:
+        elif self.enable_text and sample.get("text_embs") is not None:
             n = sample["text_embs"].shape[0]
             for i in range(n):
                 doc = {"_id": str(uuid.uuid4()), "embedding": sample["text_embs"][i].tolist(), "metadata": {}}
                 doc["metadata"]["caption"] = sample["text"][i]
-                if self.enable_metadata and sample["metadata"] is not None:
+                if self.enable_metadata and sample.get("metadata") is not None:
                     meta = sample["metadata"][i]
                     if isinstance(meta, str):
                         try:
@@ -75,7 +77,13 @@ class MongoOutputSink:
                     elif not isinstance(meta, dict):
                         meta = dict(meta)
                     doc["metadata"].update(meta)
-                self.documents.append(doc)
+                new_docs.append(doc)
+
+        self.documents.extend(new_docs)
+
+        # flush if batch_size reached
+        if len(self.documents) >= self.batch_size:
+            self.flush()
 
     def flush(self):
         if not self.documents:
@@ -106,10 +114,11 @@ class MongoWriter:
 
 # ====================== QDRANT ======================
 class QdrantOutputSink:
-    """Qdrant sink in buffer style like NumpyOutputSink"""
+    """Qdrant sink with batching"""
 
     def __init__(self, url, api_key, collection_name="default",
-                 enable_text=True, enable_image=True, enable_metadata=True, vector_size=512):
+                 enable_text=True, enable_image=True, enable_metadata=True,
+                 vector_size=512, batch_size=2048):
         self.url = url
         self.api_key = api_key
         self.collection_name = collection_name
@@ -117,6 +126,7 @@ class QdrantOutputSink:
         self.enable_image = enable_image
         self.enable_metadata = enable_metadata
         self.vector_size = vector_size
+        self.batch_size = batch_size
 
         self.points = []
         self.client = None
@@ -134,7 +144,9 @@ class QdrantOutputSink:
 
     def add(self, sample):
         self._init_client()
-        if self.enable_image and sample["image_embs"] is not None:
+        new_points = []
+
+        if self.enable_image and sample.get("image_embs") is not None:
             n = sample["image_embs"].shape[0]
             for i in range(n):
                 point = PointStruct(
@@ -142,7 +154,7 @@ class QdrantOutputSink:
                     vector=sample["image_embs"][i].tolist(),
                     payload={"image_path": sample["image_filename"][i]}
                 )
-                if self.enable_metadata and sample["metadata"] is not None:
+                if self.enable_metadata and sample.get("metadata") is not None:
                     meta = sample["metadata"][i]
                     if isinstance(meta, str):
                         try:
@@ -152,9 +164,9 @@ class QdrantOutputSink:
                     elif not isinstance(meta, dict):
                         meta = dict(meta)
                     point.payload.update(meta)
-                self.points.append(point)
+                new_points.append(point)
 
-        elif self.enable_text and sample["text_embs"] is not None:
+        elif self.enable_text and sample.get("text_embs") is not None:
             n = sample["text_embs"].shape[0]
             for i in range(n):
                 point = PointStruct(
@@ -162,7 +174,7 @@ class QdrantOutputSink:
                     vector=sample["text_embs"][i].tolist(),
                     payload={"caption": sample["text"][i]}
                 )
-                if self.enable_metadata and sample["metadata"] is not None:
+                if self.enable_metadata and sample.get("metadata") is not None:
                     meta = sample["metadata"][i]
                     if isinstance(meta, str):
                         try:
@@ -172,7 +184,13 @@ class QdrantOutputSink:
                     elif not isinstance(meta, dict):
                         meta = dict(meta)
                     point.payload.update(meta)
-                self.points.append(point)
+                new_points.append(point)
+
+        self.points.extend(new_points)
+
+        # flush if batch_size reached
+        if len(self.points) >= self.batch_size:
+            self.flush()
 
     def flush(self):
         if not self.points:

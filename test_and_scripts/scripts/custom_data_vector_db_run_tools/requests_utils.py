@@ -1,6 +1,6 @@
 import yaml
 from PIL import Image
-
+import time
 from image_embedding_utils import ImageEmbedder
 from text_embedding_utils import TextEmbedder
 
@@ -10,18 +10,10 @@ def run_qdrant_request(qdrant_url, qdrant_api, collection_name, vector_name, lim
 
     client = QdrantClient(url=qdrant_url, api_key=qdrant_api)
 
-    print(f"query shape: {query.shape}")
-
     query = query.squeeze()
     query = query.tolist()
 
-    print(f"query type: {type(query)}")
-    print(f"query len: {len(query)}")
-    print(f"collection_name: {collection_name}")
-    print(f"vector_name: {vector_name}")
-    print(f"limit: {limit}")
-
-
+    start = time.time()
     response = client.query_points(
         collection_name=collection_name,
         query=query,
@@ -29,6 +21,10 @@ def run_qdrant_request(qdrant_url, qdrant_api, collection_name, vector_name, lim
         limit=limit,
         with_payload=True
     )
+    stop = time.time()
+
+    response_time = stop - start
+    print(f"response time: {response_time}s")
 
     results = []
     for point in response.points:

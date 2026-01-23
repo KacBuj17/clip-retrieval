@@ -1,6 +1,9 @@
+import time
+
 import yaml
 from PIL import Image
-import time
+from pymongo.mongo_client import MongoClient
+
 from image_embedding_utils import ImageEmbedder
 from text_embedding_utils import TextEmbedder
 
@@ -38,8 +41,46 @@ def run_qdrant_request(qdrant_url, qdrant_api, collection_name, vector_name, lim
     return results
 
 
-def run_mongo_request(mongo_uri, mongo_db_name, collection_name, vector_name, limit, query):
-    return
+def run_mongo_request(mongo_uri, mongo_db_name, collection_name, vector_name, limit, query, num_candidates=100):
+    query = query.squeeze()
+    query = query.tolist()
+
+    client = MongoClient(mongo_uri)
+    db = client[mongo_db_name]
+    collection = db[collection_name]
+
+    pipeline = [
+        {
+            "$vectorSearch": {
+                "index": "vector_index",
+                "path": f"{vector_name}_embedding",
+                "queryVector": query,
+                "numCandidates": num_candidates,
+                "limit": limit
+            }
+        }
+    ]
+
+    start = time.time()
+    raw_results = list(collection.aggregate(pipeline))
+    stop = time.time()
+
+    response_time = stop - start
+    print(f"response time: {response_time}s")
+
+    results = []
+    for doc in raw_results:
+        results.append({
+            "id": str(doc["_id"]),
+            "payload": {
+                k: v for k, v in doc.items()
+                if k not in ["_id", f"{vector_name}_embedding"]
+            },
+            "vector": doc.get(f"{vector_name}_embedding"),
+            "score": doc.get("score")
+        })
+
+    return results
 
 
 def run_db_request(query, vector_name, db_type, limit):
@@ -59,7 +100,7 @@ def run_db_request(query, vector_name, db_type, limit):
         return run_qdrant_request(qdrant_url, qdrant_api, collection_name, vector_name, limit, query)
 
 
-def run_request(input_data, input_type="text", vector_name="text", db_type="qdrant", limit=10, use_mclip=False):
+def run_request(input_data, input_type="text", vector_name="text", db_type="mongo", limit=10, use_mclip=False):
     if input_type == "text":
         embedder = TextEmbedder(use_mclip=use_mclip)
         vec = embedder.encode(input_data)

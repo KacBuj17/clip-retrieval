@@ -1,28 +1,13 @@
-from functools import lru_cache
-
 import numpy as np
 import torch
 from PIL import Image
 
-
-def normalize(x: np.ndarray) -> np.ndarray:
-    norm = np.linalg.norm(x, axis=-1, keepdims=True)
-    norm[norm == 0] = 1.0
-    return x / norm
-
-
-@lru_cache(maxsize=1)
-def load_clip_model(clip_model: str):
-    from all_clip import load_clip
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess, _ = load_clip(clip_model, device=device)
-    model.eval()
-    return model, preprocess, device
+from utils import load_clip_model
 
 
 class ImageEmbedder:
     def __init__(self, clip_model="ViT-B/32"):
-        self.model, self.preprocess, self.device = load_clip_model(clip_model)
+        self.model, self.preprocess, self.device = load_clip_model(clip_model, mode="image")
 
     def encode(self, image: Image.Image) -> np.ndarray:
         if image is None:

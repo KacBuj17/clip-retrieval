@@ -22,3 +22,4 @@ wandb
 *.tgz
 *.pex
 clip-data
+db_config.yaml

@@ -58,6 +58,11 @@ def run_mongo_request(mongo_uri, mongo_db_name, collection_name, vector_name, li
                 "numCandidates": num_candidates,
                 "limit": limit
             }
+        },
+        {
+            "$addFields": {
+                "score": {"$meta": "vectorSearchScore"}
+            }
         }
     ]
 

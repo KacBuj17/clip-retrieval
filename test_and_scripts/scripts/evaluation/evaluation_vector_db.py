@@ -250,8 +250,8 @@ def compute_plot_and_save_per_query(ann_path, res_path, out_path, k_multiply):
 
 def main():
     ann_path = os.environ.get("ANN_PATH", "resources/Anotacje.xlsx")
-    res_paths = ["resources/results_clip.csv", "resources/results_vlm.csv", "resources/results_vlm_synonyms.csv"]
-    out_paths = ["output_clip", "output_vlm", "output_vlm_synonyms"]
+    res_paths = ["resources/results_clip.csv"]
+    out_paths = ["output_clip"]
 
     k_multiply_list = [1, 2]
 

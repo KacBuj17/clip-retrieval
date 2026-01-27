@@ -45,7 +45,7 @@ def dynamic_num_images_threshold(relevant_count):
 
 def main():
     backend_host = os.environ.get("BACKEND_HOST", "127.0.0.1")
-    backend_port = os.environ.get("BACKEND_PORT", "8000")
+    backend_port = os.environ.get("BACKEND_PORT", "5000")
     url = f"http://{backend_host}:{backend_port}/knn-service"
 
     resources_folder = os.environ.get("RESOURCES_FOLDER", "resources")
